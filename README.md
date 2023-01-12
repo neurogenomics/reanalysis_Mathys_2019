@@ -29,7 +29,9 @@ snRNA-Seq data. This script uses a custom written function to apply pseudobulk
 differential analysis to any single-cell dataset (see `sc_cell_type_de.R`).
 
 ## Comparison against original findings
-See `Mathys_results_comparison_pb.html` for a comparison between the results 
+[See results](https://neurogenomics.github.io/reanalysis_Mathys_2019/Mathys_results_comparison_pb.html) 
+### details
+`Mathys_results_comparison_pb.html` gives a comparison between the results 
 reported in the original publiciation and our findings using pseudobulk 
 differential expression and a standardised data processing approach. Note the 
 authors took cells as independent replicates, a cell-level analysis, in their 
