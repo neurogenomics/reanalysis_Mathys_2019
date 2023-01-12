@@ -10,17 +10,18 @@ We used [scFlow](https://www.biorxiv.org/content/10.1101/2021.08.16.456499v2)
 leading to the exclusion of more, problematic samples.
 
 ## Download processed data
-The single-cell object (SCE) of the 
+An single-cell object (SCE) of the 
 [Mathys et al.](https://doi.org/10.1038/s41586-019-1195-2) study into 
 Single-nucleus transcriptomic analysis and differential expression (DE) of 
 Alzheimer’s disease data after processing with scFlow is available for 
-download:
+download from Figshare:
 
 ```
-#TODO - add wget when live
+wget https://figshare.com/ndownloader/files/38819949 -O ./data/sce.qs
 ```
 
-This will be needed to run the analysis below.
+Note this includes the processed count matrix and associated metadata. This 
+will be needed to run the analysis below.
 
 ## Run analysis
 The `run_reanalysis_Mathys_19.R` in the `R` folder can be used to derive the 
