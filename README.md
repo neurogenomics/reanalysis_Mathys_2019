@@ -5,14 +5,19 @@ data processing and pseudobulk differential expression approach.
 ## Standardised processing protocol
 We used [scFlow](https://www.biorxiv.org/content/10.1101/2021.08.16.456499v2) 
 (v0.6.1) for all of the 24 patients with Alzheimer's disease pathology and the 
-24 control patients. This all resulted in more stringent quality control, 
+24 control patients. The config file with all the parameters is available in
+`./scFlow_files`. This approach resulted in more stringent quality control, 
 leading to the exclusion of more, problematic samples.
 
 ## Download processed data
-The single-cell object after processing with scFLow is available for download:
+The single-cell object (SCE) of the 
+[Mathys et al.](https://doi.org/10.1038/s41586-019-1195-2) study into 
+Single-nucleus transcriptomic analysis and differential expression (DE) of 
+Alzheimer’s disease data after processing with scFlow is available for 
+download:
 
 ```
-#TODO
+#TODO - add wget when live
 ```
 
 This will be needed to run the analysis below.
