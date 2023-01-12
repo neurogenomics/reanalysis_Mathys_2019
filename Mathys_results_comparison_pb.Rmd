@@ -1,0 +1,395 @@
+---
+title: "Pseudobulk Differential Expression Analysis of Tsai datatset"
+author: "Alan Murphy"
+date: "Most recent update:<br> `r Sys.Date()`"
+output: 
+  rmarkdown::html_document: 
+    theme: spacelab
+    highlight: zenburn 
+    code_folding: show 
+    toc: true 
+    toc_float: true
+    smooth_scroll: true
+    number_sections: false 
+    self_contained: true 
+    df_print: paged
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup, include=T, message=F}
+#root.dir <- here::here()
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  #root.dir = root.dir
+  fig.height = 6,
+  fig.width = 7.00787 #178mm
+)  
+knitr::opts_knit$set(#root.dir = root.dir, 
+                     dpi = 350)  
+library(ggplot2)
+library(cowplot)
+library(data.table)
+library(wesanderson)
+library(gridExtra)
+```
+
+## Background
+Pseudobulk differential expression (DE) analysis has recently been 
+proven [1](https://doi.org/10.1038/s41467-021-25960-2) [2](https://doi.org/10.1038/s41467-022-35519-4)
+to give optimal performance compared to both mixed models and pseudoreplication
+approaches. Here, we apply a pseudobulk DE approach to the 
+[Mathys et al.](https://doi.org/10.1038/s41586-019-1195-2) Alzheimer’s disease 
+snRNA-Seq study, highlighting issues in their approach. 
+
+We use the same 6 cell types used in the paper from the 
+[Allen Brain Atlas](https://doi.org/10.1038/s41586-018-0654-5), 
+namely Astrocytes (Astro), Excitatory (Exc) and Inhibitory (Inh) neurons, 
+Microglia (Micro), Oligodendrocytes (Oligo) and 
+Oligodendrocyte Precursor Cells (OPC).
+
+## Analysis
+This analysis was run in `R/run_reanalysis_Mathys_19.R`. Please 
+**run this first** if rerunning this workbook.
+
+Note this uses sum pseudobulk count data, along with the edgeR Likelihood ratio 
+test (LRT) differential expression analysis approach. EdgeR LRT was recently 
+found to perform the best from 14 pseudobulk and non-pseudobulk single cell 
+differential analysis approaches in an independent benchmark: 
+https://doi.org/10.1038/s41467-021-25960-2.
+
+The function `sc_cell_type_de` is a multi-purpose function to run differential
+expression analysis on single-cell RNA-seq datasets. It both aggregates the data 
+to sum pseudobulk values and performs the differential expression analysis using 
+edgeR LRT for all cell types of interest.`sc_cell_type_de` can be used for 
+categorical (Case/Control) or continuous (a measure like Tau for AD) return 
+variables and can handle multiple independent variables in the design formula
+input.
+
+We can inspect the output:
+
+```{r}
+#load the return from sc_cell_type_de
+load("results/Mathys_pb_res.RData")
+print(names(sc_cell_type_de_return))
+```
+
+`celltype_DEGs` gives the differential expression information for the 
+significant, differentially expressed genes (DEGs), split by cell type. The gene
+ENSEMBL ID (ensembl_id), log fold change (logFC), the log counts per million 
+(logCPM), log ratio (LR), p-value (PValue) and adjusted p-value (adj_pval). We 
+can combine the DEGs to one data table:
+
+```{r}
+#Combine data
+combn_DEGs <-
+  rbindlist(sc_cell_type_de_return$celltype_DEGs,id="celltype")
+
+combn_DEGs
+```
+
+`celltype_all_genes` is formatted the same but contains all genes analysed not
+just those that are significant. We can combine the result split by cell type
+into a single data table as follows:
+
+```{r}
+#Combine data
+combn_DE_all_genes <-
+  rbindlist(sc_cell_type_de_return$celltype_all_genes,id="celltype")
+head(combn_DE_all_genes)
+```
+
+Finally `celltype_counts` contains the counts of cells in the study for each
+cell type:
+
+```{r}
+#View the cell type counts
+sc_cell_type_de_return$celltype_counts
+```
+
+`sc_cell_type_de` also produces graphs which we will use to explain the results
+of the analysis.
+
+## Results
+
+### Background
+This section compares the results from the recently published 
+[Mathys et al.](https://doi.org/10.1038/s41586-019-1195-2) study into 
+Single-nucleus transcriptomic analysis and differential expression (DE) of 
+Alzheimer’s disease.
+
+The aim was to identify differentially expressed genes (DEGs) prevalent in 
+Alzheimer’s disease (AD) across differing cell types. The samples were 
+single-nucleus transcriptomes from the prefrontal cortex of 48 individuals, 
+24 of which had high levels of β-amyloid and other pathological hallmarks of AD 
+(‘AD-pathology’), and 24 individuals with no or very low β-amyloid burden or 
+other pathologies (‘no-pathology’). 
+
+Mathys et al.'s approach identified **1,031** unique DEGs across 6 major cell 
+types from the Allen Brain Atlas. However, we questioned the group's quality 
+control approach, specifically in their treatment of batch effect. Moreover, 
+their differential expression analysis used an incorrect estimate of 
+uncertainty where cells from the same donor were taken as independent 
+replicates.
+
+### Quality Control (QC)
+The authors reported a net of **70,634** cells after QC. These cells were 
+grouped into the Allen Brian Atlas cell types after an unsupervised clustering 
+approach. Of the 8 cell types, 2 were removed due to a low number of samples 
+(pericyte and endothelial cells), leaving 6 cell types; excitatory (Exc) and 
+inhibitory (Inh) neurons, astrocytes (Astro), oligodendrocytes (Oligo), 
+oligodendrocyte precursor cells (OPC), and microglia (Micro).
+
+Our QC analysis resulted in **50,831** cells. To match the paper, we grouped 
+these into the Allen Brian Atlas cell types, again by an unsupervised clustering
+approach, and restricted analysis to the six cell types above.
+
+We can compare the proportion of each cell type produced from this QC analysis:
+
+```{r comp_celltypes}
+mathys_all_gene_counts_dt <- 
+  data.table::fread(file="data/Mathys_cell_counts.csv")
+mathys_all_gene_counts_dt[,prop:=count/sum(count)]
+mathys_all_gene_counts_dt[,research_group:="Mathys et al."]
+
+our_all_gene_counts_dt <- data.table::fread(file="results/cell_counts.csv")
+our_all_gene_counts_dt[,prop:=count/sum(count)]
+our_all_gene_counts_dt[,research_group:="Our analysis"]
+
+combin_gene_counts <- rbind(our_all_gene_counts_dt,mathys_all_gene_counts_dt)
+
+pal=c(wesanderson::wes_palette("Royal2"),
+                                   wesanderson::wes_palette("Moonrise3")[1])
+
+ggplot(data=combin_gene_counts,
+       aes(x=factor(cell),y = prop))+ 
+  geom_bar(aes(fill=research_group),stat="identity",position = "dodge")+
+  labs(y= "Number of cells after QC", x = "Cell Type",fill="Cell Type") +
+  geom_text(aes(label=round(prop,2), group=research_group),
+            position=position_dodge(width=0.8), vjust=-0.2,size=3) +
+  theme_cowplot()+
+  theme(axis.text = element_text(size=9))+
+  scale_fill_manual(values=c(pal[2],pal[4]))
+  
+```
+
+The proportions of cell types are roughly comparable. The biggest differences 
+being across Oligodendrocytes and Excitatory neurons. The fact that half of all 
+of Tsai group's cells were Excitatory neurons is worth noting when we inspect 
+their DEGs. 
+
+### Differential Expression Analysis
+Our analysis resulted in only **`r length(unique(unlist(lapply(sc_cell_type_de_return$celltype_DEGs, function(x) x$name))))`** DEGs:
+
+![DEGs per cell type](./results/sc_cell_type_de_graphs/DEGs_per_cell_type.png)
+  
+This was far less than the original author's results of **1,031** unique DEGs.
+
+In our analysis (using pseudobulk sum, edgeR LRT), it is interesting that the 
+DEGs are found in cell types that have small number of cells in the analysis, 
+Astrocytes,OPCs and microglias. It appears the number of DEGs identified is not 
+related to the number of cells processed. 
+
+We can see this more clearly if we inspect the proportion of DEGs of the total 
+number of cells per cell type:
+
+![DEGs per cell type with proportions of total number of cells after QC](./results/sc_cell_type_de_graphs/DEGs_proportion_per_cell_type.png)
+Microglia cells, despite making up just over 1,500 of the 50,000+ cells, had 14
+of the 16 unique DEGs.
+
+When we inspected the reported DEGs from Mathys et al's results, it was unclear 
+as to what cut-off was used to obtain the 1,031 unique DEGs across the 
+differing cell types. When an FDR of 0.05 was used, a far greater number of 
+DEGs were returned:
+
+```{r mathys_res}
+#Load the authors' analysis DEGs
+mathys_degs <- data.table(read.csv("data/Mathys_DEGs.csv"))
+print(length(unique(mathys_degs[adj_p_val<0.05,gene])))
+```
+
+To compare results for the Mathys et al., we picked an FDR value for their DEGs 
+that resulted in the same number of DEGs that our analysis produced (16). This 
+cut-off was **3.52e-224**. When we view these DEGs by cell type, it is 
+interesting that all are in excitatory neurons cell type: 
+
+```{r mathys_res2}
+candidate_cut_off <- 3.44e-210
+mathys_degs_match <-mathys_degs[adj_p_val<candidate_cut_off,]
+#see the split by cell type
+print(mathys_degs_match[,.N,by=celltype])
+```
+
+As a reminder in Mathys et al.'s analysis, excitatory neurons are, by far, the 
+largest group, making up 50% or ~35,000 of all cells after QC.
+
+We evaluated the difference in the reported FDR scores between our analysis and 
+Mathys et al.'s DEGs. First, consider our logFC scores:
+
+![DEG direction counts](./results/sc_cell_type_de_graphs/DEGs_direction_count_per_cell_type.png)
+
+![DEG boxplots](./results/sc_cell_type_de_graphs/deg_boxplots_cell_types.png)
+When we inspect the direction and effect size of the 16 DEGs from our and the 
+Tsai group's analysis, further disparities become clear.
+
+```{r comp2_1}
+#look at Tsai group DEG direction and effect size
+#lfc read in as factor, need to make it numeric
+mathys_degs_match[,lfc:=as.character(lfc)]
+mathys_degs_match[,lfc:=as.numeric(lfc)]
+mathys_degs_match[,deg_direction:="Down"]
+mathys_degs_match[lfc>0,deg_direction:="Up"]
+#count
+ggplot(data=mathys_degs_match[,.N,by=.(celltype,deg_direction)],
+       aes(x = factor(deg_direction), y = N, fill=factor(celltype)))+ 
+  geom_bar(stat="identity") + 
+  facet_wrap(~factor(celltype),scales="free")+
+  ggtitle("Cell type counts of Tsai group's DEGs")+
+  labs(y= "Log2 Fold Change", x = "DEG direction", fill="Cell Type") +
+  theme_cowplot()+
+  theme(axis.text = element_text(size=9))+
+  scale_fill_manual(values=pal)
+```
+
+Nearly all of Mathys et al.'s DEGs are down-regulated; 26 vs 3. Let's now look 
+at their results' direction and effect size:
+
+```{r comp2_2}
+#check median log2 fold change for both up and down regulated genes
+#This will give a sense of directional effect size
+
+# Compute boxplot statistics
+calc_boxplot_stat <- function(x) {
+  coef <- 1.5
+  n <- sum(!is.na(x))
+  # calculate quantiles
+  stats <- quantile(x, probs = c(0.0, 0.25, 0.5, 0.75, 1.0))
+  names(stats) <- c("ymin", "lower", "middle", "upper", "ymax")
+  iqr <- diff(stats[c(2, 4)])
+  # set whiskers
+  outliers <- x < (stats[2] - coef * iqr) | x > (stats[4] + coef * iqr)
+  if (any(outliers)) {
+    stats[c(1, 5)] <- range(c(stats[2:4], x[!outliers]), na.rm = TRUE)
+  }
+  return(stats)
+}
+
+mathys_median_lfc <- mathys_degs_match[,median(lfc),by=deg_direction]
+
+ggplot(data=mathys_degs_match,
+       aes(x = factor(deg_direction), y = abs(lfc), fill=factor(celltype)))+ 
+  stat_summary(fun.data = calc_boxplot_stat, geom="boxplot") + 
+  facet_wrap(~factor(celltype),scales="free")+
+  ggtitle("Cell type Log2 Fold Change of Mathys et al.'s DEGs",
+          subtitle = paste0("Median LFC of Tsai group's Down and Up regulated DEGs: ",
+                            round(mathys_median_lfc$V1[[2]],2),", ",
+                            round(mathys_median_lfc$V1[[1]]*-1,2)))+
+  labs(y= "Log2 Fold Change", x = "DEG direction", fill="Cell Type") +
+  theme_cowplot()+
+  theme( axis.text = element_text(size=9))+
+  scale_fill_manual(values=pal)
+```
+
+Mathys et al.'s results shows a very small proportion of up-regulated genes. 
+More interestingly, however, is the small log2 fold changes observed; median of 
+0.59 for the up-regulated genes and 0.9 for down-regulated genes which is 
+comparatively low compared to our analysis for which the median was above 3 for 
+both up and down regulated.
+
+Lastly, we wanted to try prove a theory that the distribution of DEGs noted in 
+the Tsai group's analysis across the cell types, is a function of the number of 
+cells in each cell type. To do this, we considered all genes from their analysis
+that were significant at an FDR of 0.05 (not just the 16 previously inspected):
+
+```{r mathys_dist}
+mathys_degs <- mathys_degs[adj_p_val<0.05,]
+dist_deg_celltype <- mathys_degs[,.N,by=celltype]$N
+names(dist_deg_celltype) <- mathys_degs[,.N,by=celltype]$celltype  
+
+ggplot(data=mathys_degs[,.N,by=celltype],
+       aes(x=factor(celltype),y = N, fill=factor(celltype)))+ 
+  geom_bar(stat="identity")+
+  labs(y= "Number of DEGs identified", x = "Cell Type",fill="Cell Type") +
+  geom_text(aes(x = celltype, y = N, label = N),nudge_y = 255,size=3) +
+  theme_cowplot()+
+  theme(axis.text = element_text(size=9))+
+  scale_fill_manual(values=pal)
+```
+
+It is interesting that at an FDR of 0.05, Mathys et al.'s identified ~14,000 
+Excitatory neuron DEGs from a set of just under 17,000 genes. Given that half of
+all cells after QC were Excitatory, this linked to our hypothesis that there is 
+some relationship between the number of cells and the level of significance in 
+Mathys et al.'s analysis.
+
+To test if this distribution is the same as the distribution of cells across 
+these cell types, we used a non-parametric correlation test. We then repeated 
+this comparison for our analysis:
+
+```{r tsai_dist2}
+mathys_cell_counts <- fread("./data/Mathys_cell_counts.csv")
+#make a list
+mathys_all_gene_counts <- mathys_cell_counts$count
+names(mathys_all_gene_counts) <- mathys_cell_counts$cell
+our_cell_counts <- fread("./results/cell_counts.csv")
+our_all_gene_counts <-  our_cell_counts$count
+names(our_all_gene_counts) <- our_cell_counts$cell
+#check correlation between cell counts per cell type and distribution of DEGs
+comp_mathys <- 
+  data.table("celltype"=sort(names(mathys_all_gene_counts)),
+             "cell_counts"=mathys_all_gene_counts[
+               order(names(mathys_all_gene_counts))],
+             "degs"=dist_deg_celltype[order(names(dist_deg_celltype))])
+cor_mathys <- 
+  cor.test(comp_mathys$cell_counts,
+           comp_mathys$degs,method = "spearman",exact = F)
+comp_mathys_text <- paste0('r = ', round(cor_mathys$estimate,3), ', ',
+                           paste('p = ',round(cor_mathys$p.value,3)))
+plot_mathys <- 
+  ggplot(data=comp_mathys,aes(x = cell_counts, y = degs,colour=celltype))+ 
+  geom_point(show.legend=F) + 
+  geom_smooth(method = "lm", se = T,formula='y ~ x',
+              color = 'grey20', alpha = 0.4) +
+  annotate('text', x = -Inf, y = Inf, hjust = -.1, vjust = 1,
+           label=comp_mathys_text) +
+  labs(y= "DEGs", x = "Cell Counts") +
+  theme_cowplot()+
+  theme(axis.text = element_text(size=9))+
+  scale_fill_manual(values=pal)+
+  ggtitle("Mathys et al. Analysis")
+
+#repeat for our analysis
+our_degs <- combn_DE_all_genes[adj_pval<0.05,]
+our_dist_deg_celltype <- our_degs[,.N,by=celltype]$N
+names(our_dist_deg_celltype) <- our_degs[,.N,by=celltype]$celltype  
+our_dist_deg_celltype <- c(our_dist_deg_celltype,"Exc"=0,"Inh"=0,"Oligo"=0)
+#add zero's where we didn't get any DEGs for the cell type
+comp_our <- data.table("celltype"=sort(names(our_all_gene_counts)),
+                   "cell_counts"=our_all_gene_counts[order(names(our_all_gene_counts))],
+                    "degs"=our_dist_deg_celltype[order(names(our_dist_deg_celltype))])
+cor_our <- cor.test(comp_our$cell_counts,comp_our$degs,method = "spearman",exact = F)
+our_text <- paste0('r = ', round(cor_our$estimate,3), ', ',
+               paste('p = ',round(cor_our$p.value,3)))
+plot_our <- ggplot(data=comp_our,aes(x = cell_counts, y = degs,colour=celltype))+ 
+  geom_point() + 
+  geom_smooth(method = "lm", se = T,formula='y ~ x',color = 'grey20', alpha = 0.4) +
+  annotate('text', x = -Inf, y = Inf, hjust = -.1, vjust = 1  ,label=our_text)+
+  labs(y= "DEGs", x = "Cell Counts")  +
+  theme_cowplot()+
+  theme(axis.text = element_text(size=9))+
+  scale_fill_manual(values=pal)+
+  ggtitle("Our Analysis")
+
+grid.arrange(plot_mathys, plot_our, widths=c(0.4,0.5), ncol=2)
+```
+
+To get more insight into the pseudobulk results from our analysis, we can view 
+the pseudobulk expression from the top DEGs from each cell type:
+
+![Pseudobulk expression DEGs](./results/sc_cell_type_de_graphs/Pseudobulk_exp_most_sig_genes.png)
+
+
+Finally, we can view the related volcano plots for the DEGs:
+
+![Volcano plot DEGs](./results/sc_cell_type_de_graphs/volcano_plot_degs_cell_types.png)
