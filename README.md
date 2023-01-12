@@ -8,6 +8,15 @@ We used [scFlow](https://www.biorxiv.org/content/10.1101/2021.08.16.456499v2)
 24 control patients. This all resulted in more stringent quality control, 
 leading to the exclusion of more, problematic samples.
 
+## Download processed data
+The single-cell object after processing with scFLow is available for download:
+
+```
+#TODO
+```
+
+This will be needed to run the analysis below.
+
 ## Run analysis
 The `run_reanalysis_Mathys_19.R` in the `R` folder can be used to derive the 
 true DEGs from the reprocessed Mathys et al., 2019 Alzheimer's disease patient 

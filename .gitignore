@@ -39,5 +39,5 @@ vignettes/*.pdf
 .Renviron
 
 # Data files from Mathys
-data/*
-results/*
+data/sce.qs
+results/*.RData
