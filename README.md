@@ -21,13 +21,45 @@ wget https://figshare.com/ndownloader/files/38819949 -O ./data/sce.qs
 ```
 
 Note this includes the processed count matrix and associated metadata. This 
-will be needed to run the analysis below.
+will be needed to run the analysis below. Also note that here we match the cell
+types to the original paper but we have also made avaialble a more granular cell
+type groupings which you can access in the metadata - the `cluster_celltype` 
+column rather than the `allan_celltype` column.
 
 ## Run analysis
 The `run_reanalysis_Mathys_19.R` in the `R` folder can be used to derive the 
 true DEGs from the reprocessed Mathys et al., 2019 Alzheimer's disease patient 
 snRNA-Seq data. This script uses a custom written function to apply pseudobulk
 differential analysis to any single-cell dataset (see `sc_cell_type_de.R`).
+
+## Docker file
+We also provide a docker file to create an image to rerun the analysis - removing the need
+of the user to install all the dependencies themselves. Simply run the following with docker
+installed:
+
+```
+docker build -t reanalysis_mathys_2019 .
+docker run -e PASSWORD=reanalysis --rm -p 8787:8787 reanalysis_mathys_2019
+```
+
+Now navigate to `localhost:8787` in a web browser and log in with:
+username: rstudio
+password: reanalysis
+to access the docker image. Then clone the repo in the terminal of Rstudio
+with:
+
+```
+git clone https://github.com/neurogenomics/reanalysis_Mathys_2019
+#install data
+cd reanalysis_Mathys_2019/
+wget https://figshare.com/ndownloader/files/38819949 -O ./data/sce.qs
+#rerun analysis
+cd R/
+Rscript run_reanalysis_Mathys_19.R
+```
+
+Once this runs you can look in the results folder or also knit the Rmd 
+file (Mathys_results_comparison_pb.html) to view the results.
 
 ## Comparison against original findings
 [See results](https://neurogenomics.github.io/reanalysis_Mathys_2019/Mathys_results_comparison_pb.html) 

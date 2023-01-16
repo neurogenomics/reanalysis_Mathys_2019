@@ -63,7 +63,7 @@
 #'# firstly load  your SCE object (can otherwise specify location)
 #' library(qs)
 #' library(SingleCellExperiment)
-#' SCE <- qread("./data/sce.qs")
+#' SCE <- qread("../data/sce.qs")
 #' sc.cell.type.de.return_incl_sex<- sc.cell.type.de(SCE_small,design= ~ sex + pathological_diagnosis_original,
 #' pseudobulk_ID="sample_id", celltype_ID="allan_celltype",coef="AD")
 #' # If you only want to also account for other variables as well as sex, such as postmortem interval (PMI)  

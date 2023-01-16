@@ -1,5 +1,5 @@
 ---
-title: "Pseudobulk Differential Expression Analysis of Tsai datatset"
+title: "Pseudobulk Differential Expression Analysis of Mathys et al.'s AD datatset"
 author: "Alan Murphy"
 date: "Most recent update:<br> `r Sys.Date()`"
 output: 
@@ -52,6 +52,12 @@ Oligodendrocyte Precursor Cells (OPC).
 ## Analysis
 This analysis was run in `R/run_reanalysis_Mathys_19.R`. Please 
 **run this first** if rerunning this workbook.
+
+```
+#to rerun from command line
+cd R/
+Rscript run_reanalysis_Mathys_19.R
+```
 
 Note this uses sum pseudobulk count data, along with the edgeR Likelihood ratio 
 test (LRT) differential expression analysis approach. EdgeR LRT was recently 
@@ -165,7 +171,7 @@ pal=c(wesanderson::wes_palette("Royal2"),
 ggplot(data=combin_gene_counts,
        aes(x=factor(cell),y = prop))+ 
   geom_bar(aes(fill=research_group),stat="identity",position = "dodge")+
-  labs(y= "Number of cells after QC", x = "Cell Type",fill="Cell Type") +
+  labs(y= "Proportion of cells after QC", x = "Cell Type",fill="") +
   geom_text(aes(label=round(prop,2), group=research_group),
             position=position_dodge(width=0.8), vjust=-0.2,size=3) +
   theme_cowplot()+
@@ -176,7 +182,7 @@ ggplot(data=combin_gene_counts,
 
 The proportions of cell types are roughly comparable. The biggest differences 
 being across Oligodendrocytes and Excitatory neurons. The fact that half of all 
-of Tsai group's cells were Excitatory neurons is worth noting when we inspect 
+of Mathys et al.'s cells were Excitatory neurons is worth noting when we inspect 
 their DEGs. 
 
 ### Differential Expression Analysis
@@ -231,10 +237,10 @@ Mathys et al.'s DEGs. First, consider our logFC scores:
 
 ![DEG boxplots](./results/sc_cell_type_de_graphs/deg_boxplots_cell_types.png)
 When we inspect the direction and effect size of the 16 DEGs from our and the 
-Tsai group's analysis, further disparities become clear.
+Mathys et al's analysis, further disparities become clear.
 
 ```{r comp2_1}
-#look at Tsai group DEG direction and effect size
+#look at Mathys et al.'s DEG direction and effect size
 #lfc read in as factor, need to make it numeric
 mathys_degs_match[,lfc:=as.character(lfc)]
 mathys_degs_match[,lfc:=as.numeric(lfc)]
@@ -245,7 +251,7 @@ ggplot(data=mathys_degs_match[,.N,by=.(celltype,deg_direction)],
        aes(x = factor(deg_direction), y = N, fill=factor(celltype)))+ 
   geom_bar(stat="identity") + 
   facet_wrap(~factor(celltype),scales="free")+
-  ggtitle("Cell type counts of Tsai group's DEGs")+
+  ggtitle("Cell type counts of Mathys et al.'s DEGs")+
   labs(y= "Log2 Fold Change", x = "DEG direction", fill="Cell Type") +
   theme_cowplot()+
   theme(axis.text = element_text(size=9))+
@@ -282,7 +288,7 @@ ggplot(data=mathys_degs_match,
   stat_summary(fun.data = calc_boxplot_stat, geom="boxplot") + 
   facet_wrap(~factor(celltype),scales="free")+
   ggtitle("Cell type Log2 Fold Change of Mathys et al.'s DEGs",
-          subtitle = paste0("Median LFC of Tsai group's Down and Up regulated DEGs: ",
+          subtitle = paste0("Median LFC of Mathys et al.'s Down and Up regulated DEGs: ",
                             round(mathys_median_lfc$V1[[2]],2),", ",
                             round(mathys_median_lfc$V1[[1]]*-1,2)))+
   labs(y= "Log2 Fold Change", x = "DEG direction", fill="Cell Type") +
@@ -298,7 +304,7 @@ comparatively low compared to our analysis for which the median was above 3 for
 both up and down regulated.
 
 Lastly, we wanted to try prove a theory that the distribution of DEGs noted in 
-the Tsai group's analysis across the cell types, is a function of the number of 
+the Mathys et al's analysis across the cell types, is a function of the number of 
 cells in each cell type. To do this, we considered all genes from their analysis
 that were significant at an FDR of 0.05 (not just the 16 previously inspected):
 
@@ -327,7 +333,7 @@ To test if this distribution is the same as the distribution of cells across
 these cell types, we used a non-parametric correlation test. We then repeated 
 this comparison for our analysis:
 
-```{r tsai_dist2}
+```{r mathys_dist2}
 mathys_cell_counts <- fread("./data/Mathys_cell_counts.csv")
 #make a list
 mathys_all_gene_counts <- mathys_cell_counts$count
@@ -343,7 +349,7 @@ comp_mathys <-
              "degs"=dist_deg_celltype[order(names(dist_deg_celltype))])
 cor_mathys <- 
   cor.test(comp_mathys$cell_counts,
-           comp_mathys$degs,method = "spearman",exact = F)
+           comp_mathys$degs,method = "pearson")
 comp_mathys_text <- paste0('r = ', round(cor_mathys$estimate,3), ', ',
                            paste('p = ',round(cor_mathys$p.value,3)))
 plot_mathys <- 
@@ -368,7 +374,7 @@ our_dist_deg_celltype <- c(our_dist_deg_celltype,"Exc"=0,"Inh"=0,"Oligo"=0)
 comp_our <- data.table("celltype"=sort(names(our_all_gene_counts)),
                    "cell_counts"=our_all_gene_counts[order(names(our_all_gene_counts))],
                     "degs"=our_dist_deg_celltype[order(names(our_dist_deg_celltype))])
-cor_our <- cor.test(comp_our$cell_counts,comp_our$degs,method = "spearman",exact = F)
+cor_our <- cor.test(comp_our$cell_counts,comp_our$degs,method = "pearson")
 our_text <- paste0('r = ', round(cor_our$estimate,3), ', ',
                paste('p = ',round(cor_our$p.value,3)))
 plot_our <- ggplot(data=comp_our,aes(x = cell_counts, y = degs,colour=celltype))+ 
@@ -381,7 +387,7 @@ plot_our <- ggplot(data=comp_our,aes(x = cell_counts, y = degs,colour=celltype))
   scale_fill_manual(values=pal)+
   ggtitle("Our Analysis")
 
-grid.arrange(plot_mathys, plot_our, widths=c(0.4,0.5), ncol=2)
+gridExtra::grid.arrange(plot_mathys, plot_our, widths=c(0.4,0.5), ncol=2)
 ```
 
 To get more insight into the pseudobulk results from our analysis, we can view 
