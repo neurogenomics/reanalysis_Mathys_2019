@@ -33,9 +33,10 @@ snRNA-Seq data. This script uses a custom written function to apply pseudobulk
 differential analysis to any single-cell dataset (see `sc_cell_type_de.R`).
 
 ## Docker file
-We also provide a docker file to create an image to rerun the analysis - removing the need
-of the user to install all the dependencies themselves. Simply run the following with docker
-installed:
+We also provide a docker file to create an image to rerun the analysis - 
+removing the need
+of the user to install all the dependencies themselves. Simply run the 
+following with docker installed:
 
 ```
 docker build -t reanalysis_mathys_2019 .
