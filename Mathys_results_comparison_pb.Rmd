@@ -41,7 +41,7 @@ proven [1](https://doi.org/10.1038/s41467-021-25960-2) [2](https://doi.org/10.10
 to give optimal performance compared to both mixed models and pseudoreplication
 approaches. Here, we apply a pseudobulk DE approach to the 
 [Mathys et al.](https://doi.org/10.1038/s41586-019-1195-2) Alzheimer’s disease 
-snRNA-Seq study, highlighting issues in their approach. 
+snRNA-Seq study. 
 
 We use the same 6 cell types used in the paper from the 
 [Allen Brain Atlas](https://doi.org/10.1038/s41586-018-0654-5), 
@@ -133,13 +133,15 @@ single-nucleus transcriptomes from the prefrontal cortex of 48 individuals,
 other pathologies (‘no-pathology’). 
 
 Mathys et al.'s approach identified **1,031** unique DEGs across 6 major cell 
-types from the Allen Brain Atlas. However, we questioned the group's quality 
-control approach, specifically in their treatment of batch effect. Moreover, 
-their differential expression analysis used an incorrect estimate of 
-uncertainty where cells from the same donor were taken as independent 
-replicates.
+types from the Allen Brain Atlas. However, we re-analysed the data,changing the 
+quality control and processing approach, using 
+[scflow](https://www.biorxiv.org/content/10.1101/2021.08.16.456499v2). Moreover, 
+their differential expression analysis used a cells level analysis where cells 
+from the same donor were taken as independent replicates. The DEGs were then 
+compared against a Poisson mixed model. Here, we swapped this approach for 
+pseudobulk.
 
-### Quality Control (QC)
+### Quality Control (QC) and processing
 The authors reported a net of **70,634** cells after QC. These cells were 
 grouped into the Allen Brian Atlas cell types after an unsupervised clustering 
 approach. Of the 8 cell types, 2 were removed due to a low number of samples 
@@ -186,7 +188,12 @@ of Mathys et al.'s cells were Excitatory neurons is worth noting when we inspect
 their DEGs. 
 
 ### Differential Expression Analysis
-Our analysis resulted in only **`r length(unique(unlist(lapply(sc_cell_type_de_return$celltype_DEGs, function(x) x$name))))`** DEGs:
+
+Next let's inspect the differentially expressed genes across these cell types 
+from the two approaches:
+
+
+Our analysis resulted in only **16** DEGs:
 
 ![DEGs per cell type](./results/sc_cell_type_de_graphs/DEGs_per_cell_type.png)
   
@@ -195,7 +202,7 @@ This was far less than the original author's results of **1,031** unique DEGs.
 In our analysis (using pseudobulk sum, edgeR LRT), it is interesting that the 
 DEGs are found in cell types that have small number of cells in the analysis, 
 Astrocytes,OPCs and microglias. It appears the number of DEGs identified is not 
-related to the number of cells processed. 
+related to the number of cells processed.
 
 We can see this more clearly if we inspect the proportion of DEGs of the total 
 number of cells per cell type:
@@ -204,10 +211,13 @@ number of cells per cell type:
 Microglia cells, despite making up just over 1,500 of the 50,000+ cells, had 14
 of the 16 unique DEGs.
 
-When we inspected the reported DEGs from Mathys et al's results, it was unclear 
-as to what cut-off was used to obtain the 1,031 unique DEGs across the 
-differing cell types. When an FDR of 0.05 was used, a far greater number of 
-DEGs were returned:
+We can also inspected the reported DEGs from Mathys et al's results. A p-value 
+cut-off was not used to obtain the 1,031 unique DEGs across the 
+differing cell types. Instead the results were compared against another, mixed 
+model approach. The consistency in directionality and rank of the 
+differentially expressed genes against this Poisson mixed model was used to 
+derive them. When an FDR of 0.05 was used from the cell level differential 
+expression analysis, a far greater number of DEGs were returned:
 
 ```{r mathys_res}
 #Load the authors' analysis DEGs
@@ -227,11 +237,13 @@ mathys_degs_match <-mathys_degs[adj_p_val<candidate_cut_off,]
 print(mathys_degs_match[,.N,by=celltype])
 ```
 
-As a reminder in Mathys et al.'s analysis, excitatory neurons are, by far, the 
-largest group, making up 50% or ~35,000 of all cells after QC.
+As a reminder in Mathys et al.'s analysis, excitatory neurons are the largest 
+group, making up 50% or ~35,000 of all cells after QC.
 
-We evaluated the difference in the reported FDR scores between our analysis and 
-Mathys et al.'s DEGs. First, consider our logFC scores:
+We evaluated the difference in the reported log fold change (logFC) 
+scores between our analysis and Mathys et al.'s DEGs. 
+
+First, consider our logFC scores:
 
 ![DEG direction counts](./results/sc_cell_type_de_graphs/DEGs_direction_count_per_cell_type.png)
 
@@ -258,8 +270,7 @@ ggplot(data=mathys_degs_match[,.N,by=.(celltype,deg_direction)],
   scale_fill_manual(values=pal)
 ```
 
-Nearly all of Mathys et al.'s DEGs are down-regulated; 26 vs 3. Let's now look 
-at their results' direction and effect size:
+Let's now look at their results' direction and effect size:
 
 ```{r comp2_2}
 #check median log2 fold change for both up and down regulated genes
@@ -297,13 +308,11 @@ ggplot(data=mathys_degs_match,
   scale_fill_manual(values=pal)
 ```
 
-Mathys et al.'s results shows a very small proportion of up-regulated genes. 
-More interestingly, however, is the small log2 fold changes observed; median of 
-0.59 for the up-regulated genes and 0.9 for down-regulated genes which is 
-comparatively low compared to our analysis for which the median was above 3 for 
-both up and down regulated.
+Mathys et al.'s results shows a smaller log2 fold; median of 
+0.59 for the up-regulated genes and 0.9 for down-regulated genes whereas our 
+analysis has a median above 3 for both up and down regulated.
 
-Lastly, we wanted to try prove a theory that the distribution of DEGs noted in 
+We wanted to try prove a theory that the distribution of DEGs noted in 
 the Mathys et al's analysis across the cell types, is a function of the number of 
 cells in each cell type. To do this, we considered all genes from their analysis
 that were significant at an FDR of 0.05 (not just the 16 previously inspected):

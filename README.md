@@ -7,7 +7,7 @@ We used [scFlow](https://www.biorxiv.org/content/10.1101/2021.08.16.456499v2)
 (v0.6.1) for all of the 24 patients with Alzheimer's disease pathology and the 
 24 control patients. The config file with all the parameters is available in
 `./scFlow_files`. This approach resulted in more stringent quality control, 
-leading to the exclusion of more, problematic samples.
+leading to the exclusion of more, low quality cells.
 
 ## Download processed data
 An single-cell object (SCE) of the 
@@ -22,13 +22,13 @@ wget https://figshare.com/ndownloader/files/38819949 -O ./data/sce.qs
 
 Note this includes the processed count matrix and associated metadata. This 
 will be needed to run the analysis below. Also note that here we match the cell
-types to the original paper but we have also made avaialble a more granular cell
+types to the original paper but we have also made available a more granular cell
 type groupings which you can access in the metadata - the `cluster_celltype` 
 column rather than the `allan_celltype` column.
 
 ## Run analysis
 The `run_reanalysis_Mathys_19.R` in the `R` folder can be used to derive the 
-true DEGs from the reprocessed Mathys et al., 2019 Alzheimer's disease patient 
+EGs from the reprocessed Mathys et al., 2019 Alzheimer's disease patient 
 snRNA-Seq data. This script uses a custom written function to apply pseudobulk
 differential analysis to any single-cell dataset (see `sc_cell_type_de.R`).
 
@@ -66,11 +66,11 @@ file (Mathys_results_comparison_pb.html) to view the results.
 [See results](https://neurogenomics.github.io/reanalysis_Mathys_2019/Mathys_results_comparison_pb.html) 
 ### details
 `Mathys_results_comparison_pb.html` gives a comparison between the results 
-reported in the original publiciation and our findings using pseudobulk 
+reported in the original publication and our findings using pseudobulk 
 differential expression and a standardised data processing approach. Note the 
 authors took cells as independent replicates, a cell-level analysis, in their 
 work and compared the consistency in directionality and rank of their 
 differentially expressed genes (DEGs) against a poisson mixed model. We show 
 that these DEGs are just an artefact of taking cells as independent replicates 
-by plotting the number of DEGs found against the cell counts. There is a near 
-perfect correlation for them but not for us when we use pseudobulk.
+by plotting the number of DEGs found against the cell counts. There is a strong 
+correlation for their results but not for the pseudobulk DEGs.
