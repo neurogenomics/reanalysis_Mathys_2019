@@ -221,7 +221,7 @@ expression analysis, a far greater number of DEGs were returned:
 
 ```{r mathys_res}
 #Load the authors' analysis DEGs
-mathys_degs <- data.table(read.csv("data/Mathys_DEGs.csv"))
+mathys_degs <- data.table::fread("data/Mathys_DEGs.csv")
 print(length(unique(mathys_degs[adj_p_val<0.05,gene])))
 ```
 

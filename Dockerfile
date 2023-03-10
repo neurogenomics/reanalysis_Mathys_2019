@@ -107,8 +107,8 @@ viridis \
 ggrepel \
 Hmisc \
 reshape2 \
-wesanderson
-
+wesanderson \
+Seurat
 
 # Install Bioc dependencies
 RUN apt-get update \

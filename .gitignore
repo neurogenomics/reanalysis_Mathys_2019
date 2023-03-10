@@ -40,4 +40,9 @@ vignettes/*.pdf
 
 # Data files from Mathys
 data/sce.qs
+data/filtered_column_metadata.txt
+data/filtered_count_matrix.mtx
+data/ROSMAP_Clinical_2019-05_v2.csv
+data/id_mapping.csv
+data/filtered_gene_row_names.txt
 results/*.RData
