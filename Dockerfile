@@ -108,7 +108,8 @@ ggrepel \
 Hmisc \
 reshape2 \
 wesanderson \
-Seurat
+Seurat \
+&& rm -rf /tmp/downloaded_packages
 
 # Install Bioc dependencies
 RUN apt-get update \
