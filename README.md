@@ -39,7 +39,18 @@ of the user to install all the dependencies themselves. Simply run the
 following with docker installed:
 
 ```
+docker pull neurogenomicslab/reanalysis_mathys_2019
+```
+
+or recreate the docker image with:
+
+```
 docker build -t reanalysis_mathys_2019 .
+```
+
+Whether you pull or recreate the image, next run it:
+
+```
 docker run -e PASSWORD=reanalysis --rm -p 8787:8787 reanalysis_mathys_2019
 ```
 
