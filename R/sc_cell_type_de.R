@@ -103,13 +103,21 @@ sc_cell_type_de <- function(SCE, design, pseudobulk_ID, celltype_ID, y=NULL,
                             region="single_region", coef=NULL, control=NULL,
                             pval_adjust_method = "BH", adj_pval=0.05,
                             folder="sc_cell_type_de_graphs/", 
-                            rmv_zero_count_genes=TRUE, verbose=F){
+                            rmv_zero_count_genes=TRUE, verbose=F,
+                            get_gene_names=T){
     #source necessary functions from other scripts
-    source("validate_input_parameters_de.R")
-    source("make_pseudobulk.R")
-    source("de_analysis.R")
-    source("plot_de_analysis.R")
-    
+    #check whether ran from ./R or proj top dir
+    if(basename(getwd())=='R'){
+      source("validate_input_parameters_de.R")
+      source("make_pseudobulk.R")
+      source("de_analysis.R")
+      source("plot_de_analysis.R")
+    } else{ #ran from reanalysis_Mathys_2019 parent dir
+      source("./R/validate_input_parameters_de.R")
+      source("./R/make_pseudobulk.R")
+      source("./R/de_analysis.R")
+      source("./R/plot_de_analysis.R")
+    }
     #need to load SCE if a directory is passed
     if(class(SCE)[1]=="character"){
         if(!file.exists(SCE))
@@ -181,7 +189,8 @@ sc_cell_type_de <- function(SCE, design, pseudobulk_ID, celltype_ID, y=NULL,
     unique_degs <- unique(unlist(unique_genes))
     
     #if no DEGs found break but return the DE analysis scores still
-    if(length(unique_degs)==0)
+    #or if we don't want to get gene names
+    if(length(unique_degs)==0 || isFALSE(get_gene_names))
         return(list("celltype_DEGs"=celltype_DEGs,
                     "celltype_all_genes"=celltype_de,
                     "celltype_counts"=counts_celltypes))

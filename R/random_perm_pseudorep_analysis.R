@@ -24,6 +24,7 @@ run_pseudoreplication <- function(count_mat,meta,AD_discrim_col){
   sc <- NormalizeData(sc)
   #loop through cell types to find DEGs
   DEG = list()
+  labels <- unique(meta[[AD_discrim_col]])
   for (cell_type_i in seq_along(unique(meta$broad.cell.type))) {
     cell <- unique(meta$broad.cell.type)[cell_type_i]
     #ignore Endothelial/pericytes cells to match authors' approach
@@ -88,11 +89,11 @@ randomly_shuffle <- function(meta,seed){
 
 #load dataset 
 Mathys_org <- 
-  Matrix::readMM("data/filtered_count_matrix.mtx")#"../data/filtered_count_matrix.mtx")
+  Matrix::readMM("../data/filtered_count_matrix.mtx")
 #load metadata
-meta <- fread("data/filtered_column_metadata.txt")#"../data/filtered_column_metadata.txt")
-clinicalMeta <- fread("data/ROSMAP_Clinical_2019-05_v2.csv")#"../data/ROSMAP_Clinical_2019-05_v2.csv")
-idmap <- fread("data/id_mapping.csv")#"../data/id_mapping.csv")
+meta <- fread("../data/filtered_column_metadata.txt")
+clinicalMeta <- fread("../data/ROSMAP_Clinical_2019-05_v2.csv")
+idmap <- fread("../data/id_mapping.csv")
 idmap[,fastq:=NULL]
 idmap <- unique(idmap)
 #we know ROS 1-24 no AD, >24 AD from Manuscript
@@ -109,7 +110,7 @@ setorder(clinicalMeta,AD_pathology)
 meta[idmap,AD_pathology:=i.AD_pathology, on="projid"]
 #add data to count matrix
 colnames(Mathys_org)<-meta$TAG
-rownames(Mathys_org)<- readLines("data/filtered_gene_row_names.txt")#../data/filtered_gene_row_names.txt)
+rownames(Mathys_org)<- readLines("../data/filtered_gene_row_names.txt")
 
 #First let's check running it normally against author's results ---------------
 
@@ -118,7 +119,7 @@ rownames(Mathys_org)<- readLines("data/filtered_gene_row_names.txt")#../data/fil
 DEG <- run_pseudoreplication(Mathys_org,meta,
                              AD_discrim_col='AD_pathology')
 #load to compare to what authors reported
-mathys_degs <- data.table::fread("data/Mathys_DEGs.csv") #../data/Mathys_DEGs.csv")
+mathys_degs <- data.table::fread("../data/Mathys_DEGs.csv")
 mathys_degs
 #convert cell names to match
 DEG[celltype=="Ex",celltype:="Exc"]
@@ -140,7 +141,7 @@ print(nrow(mathys_degs[adj_p_val<0.05 & our_adj_p_val<0.05]))
 
 #save res - overlap to what author's found isn't identical
 #methods section was very sparse for this though
-fwrite(DEG,"./data/DEGs_pseudorep.csv")#"../data/DEGs_pseudorep.csv")
+fwrite(DEG,"../data/DEGs_pseudorep.csv")
 # -----------------------------------------------------------------------------
 
 #Now run random permutations
@@ -181,130 +182,77 @@ for(i in seq_len(rand_perm_tests)){
 
 #combine results
 all_rand_perm_degs_dt <- rbindlist(all_rand_perm_degs,idcol='run')
-
+all_rand_perm_degs_counts <- all_rand_perm_degs_dt[p_val_adj<0.05,.N,
+                                                   by=.(run,celltype)]
+#update cell names to match other results
+all_rand_perm_degs_counts[celltype=="Ex",celltype:="Exc"]
+all_rand_perm_degs_counts[celltype=="Oli",celltype:="Oligo"]
+all_rand_perm_degs_counts[celltype=="In",celltype:="Inh"]
+all_rand_perm_degs_counts[celltype=="Ast",celltype:="Astro"]
+all_rand_perm_degs_counts[celltype=="Opc",celltype:="OPC"]
+all_rand_perm_degs_counts[celltype=="Mic",celltype:="Micro"]
+#need to add in 0 rows for where no genes found for a cell type
+runs <- sort(unique(all_rand_perm_degs_counts$run))
+cell_types <- unique(all_rand_perm_degs_counts$celltype)
+for(perm_i in runs){
+  perm_i_dat <- all_rand_perm_degs_counts[run==perm_i]
+  if(nrow(perm_i_dat)<6){
+    #missing at least one cell type - get which
+    mis_ct <- setdiff(cell_types, perm_i_dat$celltype)
+    for(cell_i in mis_ct){
+      all_rand_perm_degs_counts <-
+        rbindlist(list(all_rand_perm_degs_counts,
+                       data.table::data.table("run"=perm_i,
+                                              "celltype"=cell_i,
+                                              "N"=0))
+        )
+    }
+  }
+}
 #save results
-fwrite(DEG_rand_perm,"./data/DEGs_pseudorep_rand_perm_seed101.csv")#"../data/DEGs_pseudorep_rand_perm_seed101.csv")
-
-
-
-
-
-#number of DEGs
-print(paste0("Number of DEGs based on AD pathology: ",
-             nrow(DEG[p_val_adj<0.05])))
-print(paste0("Number of DEGs based on random permutation AD pathology: ",
-             nrow(DEG_rand_perm[p_val_adj<0.05])))
-print(paste0("Number of DEGs based on random permutation AD pathology: ",
-             nrow(DEG_rand_perm2[p_val_adj<0.05])))
-print(paste0("Number of DEGs based on random permutation AD pathology: ",
-             nrow(DEG_rand_perm3[p_val_adj<0.05])))
-
-#plot correlation between cell counts and DEGs
-#get DEG counts
-dist_deg <- DEG[p_val_adj<0.05,.N,by=celltype]$N
-names(dist_deg) <- DEG[p_val_adj<0.05,.N,by=celltype]$celltype
-dist_deg_rand_perm <- DEG_rand_perm[p_val_adj<0.05,.N,by=celltype]$N
-names(dist_deg_rand_perm) <- 
-  DEG_rand_perm[p_val_adj<0.05,.N,by=celltype]$celltype
-dist_deg_rand_perm2 <- DEG_rand_perm2[p_val_adj<0.05,.N,by=celltype]$N
-names(dist_deg_rand_perm2) <- 
-  DEG_rand_perm2[p_val_adj<0.05,.N,by=celltype]$celltype
-#missing Mic, add 0
-dist_deg_rand_perm3 <- c(DEG_rand_perm3[p_val_adj<0.05,.N,by=celltype]$N,0)
-names(dist_deg_rand_perm3) <- 
-  c(DEG_rand_perm3[p_val_adj<0.05,.N,by=celltype]$celltype,'Mic')
+fwrite(all_rand_perm_degs_counts,"../data/DEGs_pseudorep_rand_perm_counts.csv")
+#plot correlation between cell counts and rand perm DEGs
 #get counts
-mathys_cell_counts <- data.table::fread("./data/Mathys_cell_counts.csv")#../data/Mathys_cell_counts.csv")
-#make a list
-mathys_all_gene_counts <- mathys_cell_counts$count
-names(mathys_all_gene_counts) <- mathys_cell_counts$cell
-#add DEG counts for perms and norm
-rand_perm_mathys <- 
-  data.table("celltype"=sort(names(mathys_all_gene_counts)),
-             "cell_counts"=mathys_all_gene_counts[
-               order(names(mathys_all_gene_counts))],
-             "degs"=dist_deg[order(names(dist_deg))],
-             "degs_rand_perm"=dist_deg_rand_perm[
-               order(names(dist_deg_rand_perm))],
-             "degs_rand_perm2"=dist_deg_rand_perm2[
-               order(names(dist_deg_rand_perm2))],
-             "degs_rand_perm3"=dist_deg_rand_perm3[
-               order(names(dist_deg_rand_perm3))]
-             )
-rand_perm_corr_txts <- vector(mode='list',
-                              length=4)
-cor_mathys <- 
-  cor.test(rand_perm_mathys$cell_counts,
-           rand_perm_mathys$degs,method = "pearson")
-comp_mathys_text <- paste0('r = ', round(cor_mathys$estimate,2))
-rand_perm_corr_txts[[1]]<-comp_mathys_text
-cor_mathys_rand_perm <- 
-  cor.test(rand_perm_mathys$cell_counts,
-           rand_perm_mathys$degs_rand_perm,method = "pearson")
-comp_mathys_text_rand_perm <- paste0('r = ', 
-                                     round(cor_mathys_rand_perm$estimate,2))
-rand_perm_corr_txts[[2]]<-comp_mathys_text_rand_perm
-cor_mathys_rand_perm2 <- 
-  cor.test(rand_perm_mathys$cell_counts,
-           rand_perm_mathys$degs_rand_perm2,method = "pearson")
-comp_mathys_text_rand_perm2 <- paste0('r = ', 
-                                     round(cor_mathys_rand_perm2$estimate,2))
-rand_perm_corr_txts[[3]]<-comp_mathys_text_rand_perm2
-cor_mathys_rand_perm3 <- 
-  cor.test(rand_perm_mathys$cell_counts,
-           rand_perm_mathys$degs_rand_perm3,method = "pearson")
-comp_mathys_text_rand_perm3 <- paste0('r = ', 
-                                     round(cor_mathys_rand_perm3$estimate,2))
-rand_perm_corr_txts[[4]]<-comp_mathys_text_rand_perm3
-#wide to long
-setnames(rand_perm_mathys,c('celltype','cell_counts',
-                            'No random permutation','Random permutation 1',
-                            'Random permutation 2','Random permutation 3'))
-rand_perm_mathys_long <-
-  data.table::melt(rand_perm_mathys,
-                   id.vars = c('celltype', 'cell_counts')
-                   )
+mathys_cell_counts <- data.table::fread("../data/Mathys_cell_counts.csv")
+setnames(mathys_cell_counts,"cell","celltype")
+#add to dt
+all_rand_perm_degs_counts[mathys_cell_counts,cell_counts:=i.count,on="celltype"]
+
+#get corr for each run
+rand_perm_cors <- vector(mode='list',length=length(runs))
+names(rand_perm_cors) <- runs
+for(perm_i in runs){
+  cor_i <- cor.test(all_rand_perm_degs_counts[run==perm_i,]$cell_counts,
+                    all_rand_perm_degs_counts[run==perm_i,]$N,
+                    method = "pearson")
+  rand_perm_cors[[perm_i]] <- cor_i$estimate
+}
+comp_mathys_text_rand_perm <- paste0('mean r = ', 
+                                     round(mean(unlist(rand_perm_cors)),2))
 
 #plot correlation between count cells and number DEGs
-library(data.table)
-library(cowplot)
-library(wesanderson)
-library(ggplot2)
-library(patchwork)
-
 pal=c(wesanderson::wes_palette("Royal2"),
       wesanderson::wes_palette("Moonrise3")[1])
 
-rand_perms_var <- unique(rand_perm_mathys_long$variable)
-rand_perm_plts <- vector(mode='list',
-                         length=length(rand_perms_var))
-for(i in seq_along(rand_perms_var)){
-  rand_perm_i <- rand_perms_var[[i]]
-  #exclude pal 2 and 4 - used for main two colours
-  pal_i <- pal[-4][-2][[i]]
-  rand_perm_plts[[i]]<-
-    ggplot(data=rand_perm_mathys_long[variable==rand_perm_i,],
-         aes(x = cell_counts, 
-             y = value,colour=variable))+ 
-    geom_smooth(data=rand_perm_mathys_long[variable==rand_perm_i,],
-                method = "lm", se = T,formula='y ~ x',
-                color = pal_i, alpha = 0.4,fill="white") +  
-    geom_point(size=3,color=pal_i) +
-    annotate('text', x = -Inf, y = Inf, hjust = -1.7, vjust = 1, 
-             label=rand_perm_corr_txts[[i]],color = pal_i) +
-    scale_y_continuous(labels = scales::label_number(suffix = "K", 
-                                                     scale = 1e-3))+
-    scale_x_continuous(labels = scales::label_number(suffix = "K", 
-                                                     scale = 1e-3))+
-    labs(y= "Number of DEGs", x = "Cell Counts",colour="") +
-    ggtitle(paste0("pseudoreplication - ", rand_perm_i))+
-    theme_cowplot()+
-    theme(axis.text = element_text(size=9),
-          plot.title = element_text(size = 13, face = "plain"),
-          axis.title = element_text(size=11),
-          legend.position="none")
-}
-
-combn_rnd_perm_fig <- 
-  rand_perm_plts[[1]]+rand_perm_plts[[2]]+
-  rand_perm_plts[[3]]+rand_perm_plts[[4]]
+ggplot(data=all_rand_perm_degs_counts,
+       aes(x = cell_counts, 
+           y = N,colour=celltype))+ 
+  geom_smooth(data=all_rand_perm_degs_counts,
+              method = "lm", se = T,formula='y ~ x',
+              color = "grey20", alpha = 0.4,fill="white") +  
+  geom_boxplot(outlier.colour = NULL)+
+  #geom_point(size=3,color=pal) +
+  annotate('text', x = -Inf, y = Inf, hjust = -1.7, vjust = 1, 
+           label=comp_mathys_text_rand_perm) +
+  scale_y_continuous(labels = scales::label_number(suffix = "K", 
+                                                   scale = 1e-3),
+                     limits=c(0,1e3))+
+  scale_x_continuous(labels = scales::label_number(suffix = "K", 
+                                                   scale = 1e-3))+
+  labs(y= "Number of DEGs", x = "Cell Counts",colour="") +
+  ggtitle("pseudoreplication - 100 random permutations")+
+  theme_cowplot()+
+  theme(axis.text = element_text(size=9),
+        plot.title = element_text(size = 13, face = "plain"),
+        axis.title = element_text(size=11))+
+  scale_colour_manual(values=pal)

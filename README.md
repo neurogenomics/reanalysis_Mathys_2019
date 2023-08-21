@@ -74,3 +74,7 @@ differentially expressed genes (DEGs) against a poisson mixed model. We show
 that these DEGs are just an artefact of taking cells as independent replicates 
 by plotting the number of DEGs found against the cell counts. There is a strong 
 correlation for their results but not for the pseudobulk DEGs.
+
+## Replicate Random permutation analysis
+Run `random_perm_pseudorep_pseudobulk_analysis.R` to replicate the random permutation analysis
+based on pseudoreplication and pseudobulk differential expression methods.
