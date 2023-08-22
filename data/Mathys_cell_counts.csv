@@ -1,7 +1,7 @@
-cell,count
-Oligo,18235
-OPC,2627
-Astro,3392
-Exc,34976
-Micro,1920
-Inh,9196
+cell,cell2,count
+Oligo,Oli,18235
+OPC,Opc,2627
+Astro,Ast,3392
+Exc,Ex,34976
+Micro,Mic,1920
+Inh,In,9196
