@@ -18,11 +18,13 @@
 #' type
 #' @param folder the folder where the graphs from the differential expression 
 #' analysis are saved.
+#' @param keytype are the current ID's for the genes gene symbols () or Ensembl 
+#' ID's (GENEID)? Default is that they are Ensembl ID's (GENEID).
 #' @param pal colour pallete to use for plots. Needs a vector of 6 colours 
 #' (hex). By default, uses a Wes Anderson colour palette.
 #' @return NULL
 plot_de_analysis <- function(pb_dat,y,celltype_DEGs_dt,celltype_all_genes_dt,
-                             counts_celltypes,folder,
+                             counts_celltypes,folder,keytype = "GENEID",
                              pal=c(wesanderson::wes_palette("Royal2"),
                                    wesanderson::wes_palette("Moonrise3")[1])){
     logFC = name = NULL
@@ -61,21 +63,31 @@ plot_de_analysis <- function(pb_dat,y,celltype_DEGs_dt,celltype_all_genes_dt,
     #add in gene names
     genes <- unique(as.character(top_degs_pseudobulk_exp$name))
     gene_IDs <- ensembldb::select(EnsDb.Hsapiens.v79, keys= genes, 
-                                  keytype = "GENEID", 
+                                  keytype = keytype, 
                                   columns = c("GENEID","SYMBOL"))
-    colnames(gene_IDs) <- c("ensembl_gene_id","hgnc_symbol")
-    gene_IDs <- data.table::as.data.table(gene_IDs)
-    data.table::setnames(gene_IDs,"ensembl_gene_id","name")
+    if(keytype=="GENENAME"){
+      colnames(gene_IDs) <- c("GENENAME","ensembl_gene_id","hgnc_symbol")
+      gene_IDs <- data.table::as.data.table(gene_IDs)
+      data.table::setnames(gene_IDs,"hgnc_symbol","name")
+      to_get_id <- "ensembl_gene_id"
+      hgnc_col <- "name"
+    }else{#GENEID
+      colnames(gene_IDs) <- c("ensembl_gene_id","hgnc_symbol")  
+      gene_IDs <- data.table::as.data.table(gene_IDs)
+      data.table::setnames(gene_IDs,"ensembl_gene_id","name")
+      to_get_id <- "hgnc_symbol"
+      hgnc_col <- "gene_name"
+    }
     #remove any dups in the reference set - two names for one ENSEMBL ID
     gene_IDs <- unique(gene_IDs,by="name")
     data.table::setkey(top_degs_pseudobulk_exp,name)
     #append gene names
     top_degs_pseudobulk_exp[, gene_name := gene_IDs
                             [top_degs_pseudobulk_exp, on=.(name), 
-                                    x.hgnc_symbol]]
+                              get(to_get_id)]]
     #plot increase size A4
     top_degs_pseudobulk_exp_plot <-
-      ggplot(top_degs_pseudobulk_exp[gene_name!=""&!is.na(deg_direction),], 
+      ggplot(top_degs_pseudobulk_exp[hgnc_col!=""&!is.na(deg_direction),], 
                aes(x = phenotype, y = expression,colour=deg_direction)) +
         geom_jitter(height=0) +
         stat_summary(fun.data = "mean_cl_normal",
@@ -87,11 +99,11 @@ plot_de_analysis <- function(pb_dat,y,celltype_DEGs_dt,celltype_all_genes_dt,
         labs(y= "Sum pseudobulk expression counts (unnormalised)", 
                 x = "Phenotype",
              colour="DEG direction") +
-        facet_wrap(~ celltype+gene_name, scales = "free_y")+
+        facet_wrap(as.formula(paste0(' ~ celltype +', hgnc_col)), 
+                   scales = "free_y")+
         theme_cowplot()+
         theme(strip.text.x = element_text(size = 6),
               axis.text = element_text(size=6))+
-        #scale_colour_viridis(discrete = T)
         scale_colour_manual(values=pal)
     #save the graph to folder
     suppressMessages(ggsave(path = folder,
@@ -222,18 +234,25 @@ plot_de_analysis <- function(pb_dat,y,celltype_DEGs_dt,celltype_all_genes_dt,
     #get gene names - for sig genes
     genes <- unique(celltype_all_genes_dt[adj_pval<0.05,]$name)
     gene_IDs <- ensembldb::select(EnsDb.Hsapiens.v79, keys= genes, 
-                                  keytype = "GENEID", 
+                                  keytype = keytype, 
                                   columns = c("GENEID","SYMBOL"))
-    colnames(gene_IDs) <- c("ensembl_gene_id","hgnc_symbol")
-    gene_IDs <- data.table::as.data.table(gene_IDs)
-    data.table::setnames(gene_IDs,"ensembl_gene_id","name")
+    if(keytype=="GENENAME"){
+      colnames(gene_IDs) <- c("GENENAME","ensembl_gene_id","hgnc_symbol")
+      gene_IDs <- data.table::as.data.table(gene_IDs)
+      data.table::setnames(gene_IDs,"hgnc_symbol","name")
+    }else{#GENEID
+      colnames(gene_IDs) <- c("ensembl_gene_id","hgnc_symbol")  
+      gene_IDs <- data.table::as.data.table(gene_IDs)
+      data.table::setnames(gene_IDs,"ensembl_gene_id","name")
+    }
     #in case any ID's have more than one hgnc name found 
     gene_IDs <- gene_IDs[!duplicated(gene_IDs$name),]
     data.table::setkey(gene_IDs,name)
     data.table::setkey(celltype_all_genes_dt,name)
     #append gene names
     celltype_all_genes_dt[, gene_name := 
-                              gene_IDs[celltype_all_genes_dt, x.hgnc_symbol]]
+                              gene_IDs[celltype_all_genes_dt, on=.(name),
+                                       get(to_get_id)]]
     #add colour identifier
     celltype_all_genes_dt[,colour_ident:="Not Significant"]
     celltype_all_genes_dt[adj_pval<0.05 & logFC<0 ,
@@ -266,7 +285,7 @@ plot_de_analysis <- function(pb_dat,y,celltype_DEGs_dt,celltype_all_genes_dt,
                 celltype_all_genes_dt[,.I[adj_pval %in% 
                                               sort(adj_pval)[1:3]][1:3],
                                       by=celltype]$V1],
-            aes(label = gene_name),
+            aes(label = get(hgnc_col)),
             size = 3,
             box.padding = unit(0.35, "lines"),
             point.padding = unit(0.3, "lines")

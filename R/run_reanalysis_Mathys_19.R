@@ -44,8 +44,8 @@ sc_cell_type_de_return <-
   sc_cell_type_de(Mathys_SCE, design = ~ pathological_diagnosis_original, 
                   pseudobulk_ID="sample_id", celltype_ID="allan_celltype",
                   folder = "../results/sc_cell_type_de_graphs/",
+                  control = "Control",
                   verbose=TRUE)
-#TO DO - add gene name to DEGs in results.......
 #save results
 #Cell Counts
 data.table::fwrite(data.table(cell=names(

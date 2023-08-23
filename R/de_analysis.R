@@ -46,7 +46,7 @@ de_analysis <- function(pb_dat,formula,y_name,y_contin,coef, control,
             message("Analysing ",ct_i)
         targets <- pb_dat[[ct_i]]$annot_pb
         if(!y_contin){#adjust levels based on user input if not contin
-            #chec if factor inputted, if not convert
+            #check if factor inputted, if not convert
             if(!is.factor(targets[[y_name]])){
                 targets[[y_name]] <- as.factor(targets[[y_name]])
             }
@@ -82,10 +82,30 @@ de_analysis <- function(pb_dat,formula,y_name,y_contin,coef, control,
             }
             else{
                 if(!is.null(coef)){#if user inputted value for case samples
-                    new_levels <- c(old_levels[which(coef!=old_levels)],coef)
+                    if(is.null(control)){
+                      message(paste0("WARNING: No control passed so coef may",
+                                     " not be compared against desired ",
+                                     "variable"))
+                      new_levels <- 
+                        c(old_levels[which(coef!=old_levels)],coef)
+                    }
+                    else{
+                      new_levels <- 
+                        c(control,
+                          old_levels[which(coef!=old_levels & 
+                                             control!=old_levels)],coef)
+                    }
                 }
                 else{
-                    new_levels <- old_levels #do nothing no coef
+                    if(is.null(control)){
+                      message(paste0("WARNING: No control passed so will be ",
+                                     "compared against: ",old_levels[1]))
+                      new_levels <- old_levels #do nothing to current control
+                    }
+                    else{
+                      new_levels <- 
+                        c(control,old_levels[which(control!=old_levels)])
+                    }  
                 }
             }
             #assign the new levels

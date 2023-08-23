@@ -187,53 +187,106 @@ sc_cell_type_de <- function(SCE, design, pseudobulk_ID, celltype_ID, y=NULL,
                     "celltype_counts"=counts_celltypes))
     
     if(isTRUE(verbose))
-        message(length(unique_degs)," unique DEGs foundacross all cell types")
+        message(length(unique_degs)," unique DEGs found across all cell types")
     
     celltype_all_genes_dt <- data.table::rbindlist(celltype_de,idcol = T)
     setnames(celltype_all_genes_dt,".id","celltype")
     celltype_DEGs_dt <- data.table::rbindlist(celltype_DEGs,idcol = T)
     setnames(celltype_DEGs_dt,".id","celltype")
     
-    
     if(!isFALSE(folder)){
         if(isTRUE(verbose))
             message("Plotting the results of differential expression analysis")
+        #check if given ensebl ids or gene names
+        all_num <- length(celltype_DEGs_dt$name)
+        ens_num <- length(celltype_DEGs_dt$name[grepl("^ENSG", 
+                                                      celltype_DEGs_dt$name)])
+        if((all_num-ens_num)>(all_num/2)){#gene name
+          keytype='GENENAME'
+        } else{#ensembl
+          keytype='GENEID'
+        }
         #make plots for DE analysis
         plot_de_analysis(pb_dat,y,celltype_DEGs_dt,celltype_all_genes_dt,
-                         counts_celltypes,folder)
+                         counts_celltypes,folder,keytype)
     }
     
     #get gene names for DEGs
     genes <- unique(data.table::rbindlist(celltype_DEGs)$name)
+    #check if given ensebl ids or gene names
+    all_num <- length(genes)
+    ens_num <- length(genes[grepl("^ENSG", genes)])
+    if((all_num-ens_num)>(all_num/2)){#gene name
+      keytype='GENENAME'
+    }
+    else{#ensembl
+      keytype='GENEID'
+    }
     gene_IDs <- ensembldb::select(EnsDb.Hsapiens.v79, keys= genes, 
-                                  keytype = "GENEID", 
+                                  keytype = keytype, 
                                   columns = c("GENEID","SYMBOL"))
-    colnames(gene_IDs) <- c("ensembl_gene_id","hgnc_symbol")
-    gene_IDs <- data.table::as.data.table(gene_IDs)
-    data.table::setnames(gene_IDs,"ensembl_gene_id","name")
+    if(keytype=="GENENAME"){
+      colnames(gene_IDs) <- c("GENENAME","ensembl_gene_id","hgnc_symbol")
+      gene_IDs <- data.table::as.data.table(gene_IDs)
+      data.table::setnames(gene_IDs,"hgnc_symbol","name")
+      to_get_id <- "ensembl_gene_id"
+      hgnc_col <- "name"
+    }else{#GENEID
+      colnames(gene_IDs) <- c("ensembl_gene_id","hgnc_symbol")  
+      gene_IDs <- data.table::as.data.table(gene_IDs)
+      data.table::setnames(gene_IDs,"ensembl_gene_id","name")
+      to_get_id <- "hgnc_symbol"
+      hgnc_col <- "gene_name"
+    }
     #remove any dups in the reference set - two names for one ENSEMBL ID
     gene_IDs <- unique(gene_IDs,by="name")
     celltype_DEGs <-
       lapply(celltype_DEGs,
              function(i){setDT(i);setkey(i,name);
-               i[,gene_name:=gene_IDs[i, on=.(name),x.hgnc_symbol]];
-               setnames(i,"name","ensembl_id");setnames(i,"gene_name","HGNC")})
+               i[,gene_name:=gene_IDs[i, on=.(name),get(to_get_id)]]})
+    if(keytype=="GENENAME"){
+      celltype_DEGs <-
+        lapply(celltype_DEGs,
+               function(i){setnames(i,"name","HGNC");
+                 setnames(i,"gene_name","ensembl_id")})
+    }else{#GENEID
+      celltype_DEGs <-
+        lapply(celltype_DEGs,
+               function(i){setnames(i,"name","ensembl_id");
+                 setnames(i,"gene_name","HGNC")})
+    }
     
     #get gene names for all genes
     genes <- unique(data.table::rbindlist(celltype_de)$name)
     gene_IDs <- ensembldb::select(EnsDb.Hsapiens.v79, keys= genes, 
-                                  keytype = "GENEID", 
+                                  keytype = keytype,
                                   columns = c("GENEID","SYMBOL"))
-    colnames(gene_IDs) <- c("ensembl_gene_id","hgnc_symbol")
-    gene_IDs <- data.table::as.data.table(gene_IDs)
-    data.table::setnames(gene_IDs,"ensembl_gene_id","name")
+    if(keytype=="GENENAME"){
+      colnames(gene_IDs) <- c("GENENAME","ensembl_gene_id","hgnc_symbol")
+      gene_IDs <- data.table::as.data.table(gene_IDs)
+      data.table::setnames(gene_IDs,"hgnc_symbol","name")
+    }else{#GENEID
+      colnames(gene_IDs) <- c("ensembl_gene_id","hgnc_symbol")  
+      gene_IDs <- data.table::as.data.table(gene_IDs)
+      data.table::setnames(gene_IDs,"ensembl_gene_id","name")
+    }
     #remove any dups in the reference set - two names for one ENSEMBL ID
     gene_IDs <- unique(gene_IDs,by="name")
     celltype_de <-
       lapply(celltype_de,
              function(i){setDT(i);setkey(i,name);
-               i[,gene_name:=gene_IDs[i, on=.(name),x.hgnc_symbol]];
-               setnames(i,"name","ensembl_id");setnames(i,"gene_name","HGNC")})
+               i[,gene_name:=gene_IDs[i, on=.(name),get(to_get_id)]]})
+    if(keytype=="GENENAME"){
+      celltype_de <-
+        lapply(celltype_de,
+               function(i){setnames(i,"name","HGNC");
+                 setnames(i,"gene_name","ensembl_id")})
+    }else{#GENEID
+      celltype_de <-
+        lapply(celltype_de,
+               function(i){setnames(i,"name","ensembl_id");
+                 setnames(i,"gene_name","HGNC")})
+    }
     
     return(list("celltype_DEGs"=celltype_DEGs,
                 "celltype_all_genes"=celltype_de,

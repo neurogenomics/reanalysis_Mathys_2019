@@ -165,7 +165,8 @@ our_all_gene_counts_dt <- data.table::fread(file="results/cell_counts.csv")
 our_all_gene_counts_dt[,prop:=count/sum(count)]
 our_all_gene_counts_dt[,research_group:="Our analysis"]
 
-combin_gene_counts <- rbind(our_all_gene_counts_dt,mathys_all_gene_counts_dt)
+combin_gene_counts <- rbind(our_all_gene_counts_dt,mathys_all_gene_counts_dt,
+                            fill=TRUE)
 
 pal=c(wesanderson::wes_palette("Royal2"),
                                    wesanderson::wes_palette("Moonrise3")[1])

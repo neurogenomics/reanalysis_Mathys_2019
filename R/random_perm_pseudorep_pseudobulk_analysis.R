@@ -1,6 +1,5 @@
 library(data.table)
 library(Seurat)
-library(data.table)
 library(cowplot)
 library(wesanderson)
 library(ggplot2)
