@@ -45,4 +45,12 @@ data/filtered_count_matrix.mtx
 data/ROSMAP_Clinical_2019-05_v2.csv
 data/id_mapping.csv
 data/filtered_gene_row_names.txt
+data/tmp
 results/*.RData
+data/*.RData
+data/notfiltered_column_metadata.txt
+data/notfiltered_count_matrix.mtx
+data/notfiltered_gene_row_names.txt
+data/CellRangerOutput
+data/CellRangerOutput/*
+data/mito_pc_dat_mathys.csv

@@ -45,7 +45,8 @@ plot_de_analysis <- function(pb_dat,y,celltype_DEGs_dt,celltype_all_genes_dt,
         #filter and melt to get long DF of genes of interest
         #/sum(pb_dat$Micro$sumDat)
         top_degs_pseudobulk_exp[[ct_i]] <- 
-            reshape2::melt(top_degs_pseudobulk_exp[[ct_i]]$sumDat[ct_genes,,drop=FALSE])
+            reshape2::melt(top_degs_pseudobulk_exp[[ct_i]]$sumDat[ct_genes,,
+                                                                  drop=FALSE])
     }
     #combine
     top_degs_pseudobulk_exp <- 
@@ -116,6 +117,13 @@ plot_de_analysis <- function(pb_dat,y,celltype_DEGs_dt,celltype_all_genes_dt,
                             plot=top_degs_pseudobulk_exp_plot,
                             dpi = 1200,width = 8.65,
                             height = 10.0, units ="in"))
+    
+    #Plot Sum pseudobulk expression counts (normalised)"
+    
+    
+    
+    
+    
     
     #plot number of cells per cell type
     counts_celltypes_dt <- 
