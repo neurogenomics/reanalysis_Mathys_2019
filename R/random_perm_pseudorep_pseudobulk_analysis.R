@@ -226,7 +226,7 @@ for(i in seq_len(rand_perm_tests)){
 all_rand_perm_degs_dt <- rbindlist(all_rand_perm_degs,idcol='run')
 
 #save results
-fwrite(all_rand_perm_degs_dt,"./data/DEGs_pseudorep_rand_perm_seed101.csv")
+fwrite(all_rand_perm_degs_dt,"./data/DEGs_pseudorep_rand_perm_seed101.csv.gz")
 
 
 #now run the same for pseudobulk
