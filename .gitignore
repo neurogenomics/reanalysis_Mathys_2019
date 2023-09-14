@@ -54,3 +54,4 @@ data/notfiltered_gene_row_names.txt
 data/CellRangerOutput
 data/CellRangerOutput/*
 data/mito_pc_dat_mathys.csv
+data/facs_micro_DE.csv

@@ -13,12 +13,8 @@ leading to the exclusion of more, low quality cells.
 An single-cell object (SCE) of the 
 [Mathys et al.](https://doi.org/10.1038/s41586-019-1195-2) study into 
 Single-nucleus transcriptomic analysis and differential expression (DE) of 
-Alzheimer’s disease data after processing with scFlow is available for 
-download from Figshare:
-
-```
-wget https://figshare.com/ndownloader/files/38819949 -O ./data/sce.qs
-```
+Alzheimer’s disease data after processing with scFlow is available on synapse
+see: : https://doi.org/10.7303/syn51758062.1.
 
 Note this includes the processed count matrix and associated metadata. This 
 will be needed to run the analysis below. Also note that here we match the cell
@@ -89,3 +85,6 @@ correlation for their results but not for the pseudobulk DEGs.
 ## Replicate Random permutation analysis
 Run `random_perm_pseudorep_pseudobulk_analysis.R` to replicate the random permutation analysis
 based on pseudoreplication and pseudobulk differential expression methods.
+
+## Cite
+If using this work please cite our [manuscript](https://doi.org/10.1101/2023.04.01.535040).
