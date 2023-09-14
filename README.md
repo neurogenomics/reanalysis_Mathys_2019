@@ -14,7 +14,7 @@ An single-cell object (SCE) of the
 [Mathys et al.](https://doi.org/10.1038/s41586-019-1195-2) study into 
 Single-nucleus transcriptomic analysis and differential expression (DE) of 
 Alzheimer’s disease data after processing with scFlow is available on synapse
-see: : https://doi.org/10.7303/syn51758062.1.
+see: https://doi.org/10.7303/syn51758062.1.
 
 Note this includes the processed count matrix and associated metadata. This 
 will be needed to run the analysis below. Also note that here we match the cell
@@ -87,4 +87,4 @@ Run `random_perm_pseudorep_pseudobulk_analysis.R` to replicate the random permut
 based on pseudoreplication and pseudobulk differential expression methods.
 
 ## Cite
-If using this work please cite our [manuscript](https://doi.org/10.1101/2023.04.01.535040).
+If you want further details or are using this work please see/cite our [manuscript](https://doi.org/10.1101/2023.04.01.535040).
