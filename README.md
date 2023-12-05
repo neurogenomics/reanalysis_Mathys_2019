@@ -1,4 +1,7 @@
 # Re-analysis Mathys et al., 2019
+
+Now [published in eLife](https://elifesciences.org/articles/90214).
+
 A re-analysis of the [Single-cell transcriptomic analysis of Alzheimer’s disease](https://www.nature.com/articles/s41586-019-1195-2) using a standardised
 data processing and pseudobulk differential expression approach.
 
